@@ -193,8 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: "black",
   },
   indicatorText: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
     color: "black",
   },
 });
