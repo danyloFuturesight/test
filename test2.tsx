@@ -1,45 +1,73 @@
+// CarouselTest.tsx
 import React, { useState, useRef } from "react";
-import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from "react-native";
 import { headsArrayInFeet } from "./constants/heads";
+interface HeadItem {
+  isMajorTick: boolean;
+  name: string;
+  value: number;
+  id: number;
+}
 
 const { width: screenWidth } = Dimensions.get("window");
 
-const CarouselTest = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollViewRef = useRef(null);
-  const itemWidth = 20; // Зменшуємо ширину елемента вдвічі
+interface ScaleCarouselProps {
+  currentIndex: number;
+  setCurrentIndex: (index: number) => void;
+  data: HeadItem[];
+  title: string;
+}
 
-  // Повторення даних для створення циклічного ефекту
-  const cyclicData = [
-    ...headsArrayInFeet,
-    ...headsArrayInFeet,
-    ...headsArrayInFeet,
-  ];
+const ScaleCarousel: React.FC<ScaleCarouselProps> = ({
+  currentIndex,
+  setCurrentIndex,
+  data,
+  title,
+}) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const itemWidth: number = 20;
 
-  const middleIndex = headsArrayInFeet.length; // Починаємо в середині циклічних даних
+  const cyclicData: HeadItem[] = [...data, ...data, ...data];
 
-  // Обробка закінчення скролу для точного фіксування
-  const handleScrollEnd = (event) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / itemWidth);
+  const middleIndex: number = headsArrayInFeet.length;
+
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX: number = event.nativeEvent.contentOffset.x;
+    const index: number = Math.round(offsetX / itemWidth);
+
+    const targetX: number = index * itemWidth;
+    scrollViewRef.current?.scrollTo({
+      x: targetX,
+      animated: true,
+    });
 
     if (
       index < headsArrayInFeet.length ||
       index >= 2 * headsArrayInFeet.length
     ) {
-      const jumpToIndex =
+      const jumpToIndex: number =
         (index % headsArrayInFeet.length) + headsArrayInFeet.length;
-      scrollViewRef.current.scrollTo({
-        x: jumpToIndex * itemWidth,
-        animated: false,
-      });
-      setCurrentIndex(jumpToIndex % headsArrayInFeet.length);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: jumpToIndex * itemWidth,
+          animated: false,
+        });
+        setCurrentIndex(jumpToIndex % headsArrayInFeet.length);
+      }, 100);
     } else {
       setCurrentIndex(index % headsArrayInFeet.length);
     }
   };
 
-  const renderItem = (item, index) => (
+  const renderItem = (item: HeadItem, index: number): JSX.Element => (
     <View key={index} style={[styles.itemContainer, { width: itemWidth }]}>
       {item.isMajorTick && <Text style={styles.valueText}>{item.name}</Text>}
       <View
@@ -53,17 +81,18 @@ const CarouselTest = () => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.headerText}>{title}</Text>
       <ScrollView
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        snapToInterval={20} // Фіксована прокрутка по елементам
-        decelerationRate="fast" // Плавна анімація при зупинці скролу
-        onMomentumScrollEnd={handleScrollEnd} // Обробка завершення прокрутки для оновлення індексу
-        contentOffset={{ x: middleIndex * itemWidth, y: 0 }} // Починаємо з середини
+        snapToInterval={itemWidth}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleScrollEnd}
+        contentOffset={{ x: middleIndex * itemWidth, y: 0 }}
         contentContainerStyle={[
           styles.scrollViewContainer,
-          { paddingHorizontal: (screenWidth - itemWidth) / 2 }, // Динамічна адаптація для центрування
+          { paddingHorizontal: (screenWidth - itemWidth) / 2 },
         ]}
       >
         {cyclicData.map(renderItem)}
@@ -71,10 +100,11 @@ const CarouselTest = () => {
       <View style={styles.indicatorContainer}>
         <View style={styles.indicatorCircle}>
           <Text style={styles.indicatorText}>
-            {headsArrayInFeet[currentIndex - 1]?.name || "N/A"}
+            {headsArrayInFeet[currentIndex]?.name || "N/A"}
           </Text>
         </View>
         <View style={styles.indicatorLine}></View>
+        <View style={styles.triangle} />
       </View>
     </View>
   );
@@ -84,6 +114,7 @@ const styles = StyleSheet.create({
   container: {
     height: 150,
     backgroundColor: "white",
+    borderRadius: 10,
     paddingHorizontal: 10,
     elevation: 6,
     marginHorizontal: 10,
@@ -92,52 +123,73 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     justifyContent: "flex-end",
     alignItems: "center",
+    paddingBottom: 10,
+  },
+  headerText: {
+    alignSelf: "flex-start",
+    margin: 10,
+    color: "gray",
+    fontSize: 16,
+  },
+  triangle: {
+    width: 0,
+    height: 0,
+    borderRadius: 3,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "black",
   },
   scrollViewContainer: {
-    justifyContent: "flex-end", // Центрування елементів у скролі
+    justifyContent: "flex-end",
     alignItems: "flex-end",
   },
   itemContainer: {
-    alignItems: "center", // Центрування елементів і тексту
+    alignItems: "center",
     justifyContent: "flex-start",
-    width: 20,
   },
   tick: {
     width: 2,
-    backgroundColor: "black",
+    backgroundColor: "gray",
     marginTop: 5,
   },
   majorTick: {
     height: 30,
+    backgroundColor: "gray",
+    borderRadius: 100,
   },
   minorTick: {
     height: 15,
+    backgroundColor: "gray",
+    borderRadius: 100,
   },
   valueText: {
-    fontSize: 12,
-    color: "black",
-    marginBottom: 5,
+    fontSize: 14,
+    color: "gray",
     width: 30,
+    textAlign: "center",
   },
   indicatorContainer: {
     position: "absolute",
     pointerEvents: "none",
     alignItems: "center",
+    bottom: 10,
   },
   indicatorCircle: {
-    width: 50,
-    height: 25,
+    width: 60,
+    height: 30,
     borderRadius: 50,
     borderWidth: 2,
     borderColor: "black",
     backgroundColor: "white",
-    marginBottom: 10,
     justifyContent: "center",
     alignItems: "center",
   },
   indicatorLine: {
     width: 2,
-    height: 40,
+    height: 30,
     backgroundColor: "black",
   },
   indicatorText: {
@@ -147,4 +199,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CarouselTest;
+export { ScaleCarousel };
