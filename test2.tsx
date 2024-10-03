@@ -1,16 +1,46 @@
 import React, { useState, useRef } from "react";
+import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
 import { headsArrayInFeet } from "./constants/heads";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
-import Carousel from "react-native-snap-carousel";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 const CarouselTest = () => {
-  const [currentIndex, setCurrentIndex] = useState(0); // Стан для збереження індексу елемента
-  const carouselRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollViewRef = useRef(null);
+  const itemWidth = 20; // Зменшуємо ширину елемента вдвічі
 
-  const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
+  // Повторення даних для створення циклічного ефекту
+  const cyclicData = [
+    ...headsArrayInFeet,
+    ...headsArrayInFeet,
+    ...headsArrayInFeet,
+  ];
+
+  const middleIndex = headsArrayInFeet.length; // Починаємо в середині циклічних даних
+
+  // Обробка закінчення скролу для точного фіксування
+  const handleScrollEnd = (event) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / itemWidth);
+
+    if (
+      index < headsArrayInFeet.length ||
+      index >= 2 * headsArrayInFeet.length
+    ) {
+      const jumpToIndex =
+        (index % headsArrayInFeet.length) + headsArrayInFeet.length;
+      scrollViewRef.current.scrollTo({
+        x: jumpToIndex * itemWidth,
+        animated: false,
+      });
+      setCurrentIndex(jumpToIndex % headsArrayInFeet.length);
+    } else {
+      setCurrentIndex(index % headsArrayInFeet.length);
+    }
+  };
+
+  const renderItem = (item, index) => (
+    <View key={index} style={[styles.itemContainer, { width: itemWidth }]}>
       {item.isMajorTick && <Text style={styles.valueText}>{item.name}</Text>}
       <View
         style={[
@@ -21,42 +51,27 @@ const CarouselTest = () => {
     </View>
   );
 
-  const handleSnapToItem = (index) => {
-    const actualIndex = index % headsArrayInFeet.length; // Коректний індекс з урахуванням циклічності
-    setCurrentIndex(actualIndex); // Оновлюємо індекс елемента в центрі
-  };
-
   return (
     <View style={styles.container}>
-      <Carousel
-        ref={carouselRef}
-        data={headsArrayInFeet}
-        renderItem={renderItem}
-        sliderWidth={screenWidth}
-        itemWidth={screenWidth / 20} // Встановлюємо ширину елемента для лінійки
-        layout={"default"}
-        inactiveSlideScale={1} // Без змін масштабу для неактивних слайдів
-        inactiveSlideOpacity={1} // Прозорість для неактивних слайдів
-        // enableSnap={true} // Вмикаємо дотягування до найближчого елемента
-        snapToAlignment="center" // Вирівнюємо елемент по центру
-        decelerationRate="fast" // Швидке гальмування для плавного дотягування
-        scrollEnabled={true} // Дозволяємо скрол вручну
-        onSnapToItem={(index) => handleSnapToItem(index)} // Оновлюємо індекс, коли скрол завершено
-        loop={true} // Вмикаємо циклічний скрол
-        slideStyle={{ justifyContent: "flex-end", gap: 30 }}
-        contentContainerStyle={{ alignItems: "center", gap: 30 }}
-        onScroll={(e) => {
-          //   const offset = e.nativeEvent.contentOffset.x;
-          //   const index = Math.round(offset / (screenWidth / 20)); // Розраховуємо індекс вручну
-          //   setCurrentIndex(index % headsArrayInFeet.length); // Оновлюємо індекс вручну
-        }}
-        scrollEventThrottle={16} // Зменшуємо затримку для коректного відстеження скролу
-      />
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={20} // Фіксована прокрутка по елементам
+        decelerationRate="fast" // Плавна анімація при зупинці скролу
+        onMomentumScrollEnd={handleScrollEnd} // Обробка завершення прокрутки для оновлення індексу
+        contentOffset={{ x: middleIndex * itemWidth, y: 0 }} // Починаємо з середини
+        contentContainerStyle={[
+          styles.scrollViewContainer,
+          { paddingHorizontal: (screenWidth - itemWidth) / 2 }, // Динамічна адаптація для центрування
+        ]}
+      >
+        {cyclicData.map(renderItem)}
+      </ScrollView>
       <View style={styles.indicatorContainer}>
         <View style={styles.indicatorCircle}>
           <Text style={styles.indicatorText}>
-            {headsArrayInFeet[currentIndex - 3]?.name || "N/A"}{" "}
-            {/* Відображаємо ім'я поточного елемента */}
+            {headsArrayInFeet[currentIndex - 1]?.name || "N/A"}
           </Text>
         </View>
         <View style={styles.indicatorLine}></View>
@@ -69,22 +84,28 @@ const styles = StyleSheet.create({
   container: {
     height: 150,
     backgroundColor: "white",
+    paddingHorizontal: 10,
     elevation: 6,
-    marginHorizontal: 100,
+    marginHorizontal: 10,
     shadowColor: "black",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
-    justifyContent: "flex-end", // Вирівнювання каруселі внизу
+    justifyContent: "flex-end",
     alignItems: "center",
   },
+  scrollViewContainer: {
+    justifyContent: "flex-end", // Центрування елементів у скролі
+    alignItems: "flex-end",
+  },
   itemContainer: {
-    alignItems: "center", // Центрування елементів
-    justifyContent: "flex-start", // Вирівнювання позначок зверху
+    alignItems: "center", // Центрування елементів і тексту
+    justifyContent: "flex-start",
+    width: 20,
   },
   tick: {
     width: 2,
     backgroundColor: "black",
-    marginTop: 5, // Коригуємо відступи для позначок
+    marginTop: 5,
   },
   majorTick: {
     height: 30,
@@ -95,10 +116,12 @@ const styles = StyleSheet.create({
   valueText: {
     fontSize: 12,
     color: "black",
-    marginBottom: 10, // Позиціюємо текст над позначками
+    marginBottom: 5,
+    width: 30,
   },
   indicatorContainer: {
     position: "absolute",
+    pointerEvents: "none",
     alignItems: "center",
   },
   indicatorCircle: {
